@@ -1,17 +1,17 @@
 #include <iostream>
 #include <string>
+#include <vector>
+
+#define MAX_SIZE 26000
 
 using std::cin;
 using std::cout;
 using std::string;
+using std::vector;
 
-#define MAX_SIZE 25500
 #define MAX_LENGTH 16
 
-string **dict;
-int dict_size[MAX_LENGTH];
-
-string first, last;
+vector<string> *dict;
 
 struct Queue
 {
@@ -29,7 +29,7 @@ bool isEmpty(struct Queue &queue)
 
 // Enqueue
 void enqueue(struct Queue &queue, int &index, int size)
-{
+{	
 	if(isEmpty(queue))
 	{
 		queue.front = 0;
@@ -46,14 +46,15 @@ void enqueue(struct Queue &queue, int &index, int size)
 // Dequeue
 int dequeue(struct Queue &queue, int size)
 {
+	bool empty = false;
 	int result = queue.element[queue.front];
+	if(queue.front == queue.rear) empty = true;
 	queue.front = (queue.front + 1) % size;
-	if(queue.front == queue.rear)
+	if(empty)
 	{
 		queue.front = -1;
 		queue.rear = -1;
-	}
-	return result;
+	}	return result;
 }
 
 // Doublet recognition
@@ -69,24 +70,15 @@ bool isDoublet(const string &s1, const string &s2)
 		if(s1[i] != s2[i]) diff++;
 		if(diff > 1) return false;
 	}
-	if(diff == 1) return true;
-	else return false;
+	return diff == 1;
 }
 
 int main()
 {
 
 	// Initialize
-	for(int i = 0; i < MAX_LENGTH; ++i)
-	{
-		dict_size[i] = 0;
-	}
-	dict = new string*[MAX_LENGTH];
-	for(int i = 0; i < MAX_LENGTH; ++i)
-		dict[i] = new string[MAX_SIZE];
-
-
-
+	dict = new vector<string>[MAX_LENGTH];
+	
 	// Input data
 	string input;
 	while(getline(cin, input))
@@ -96,17 +88,20 @@ int main()
 		if(len == 0) break;
 		
 		// Store data
-		dict[len-1][dict_size[len-1]] = input;
-		dict_size[len-1]++;
+		dict[len-1].push_back(input);
 	}
 
+	
 	// Solving
+	bool first_prob = true;
+	string first, last;
 	while(cin >> first >> last)
 	{
+		if(!first_prob) puts("");
+		else first_prob = false;
+
 		if(!cin)
 		{
-			for(int i = 0; i < MAX_LENGTH; ++i)
-				delete [] dict[i];
 			delete [] dict;
 			return 0;
 		}
@@ -116,62 +111,55 @@ int main()
 		// If not same length
 		if(first.length() != last.length())
 		{
-			cout << "No solution.\n\n";
+			puts("No solution.");
 			continue;
 		}
 
 		int index = first.length() - 1;
+		int size = dict[index].size();
 
 		// Get adjacent matrix
-		bool adjacentMatrix[MAX_SIZE][MAX_SIZE];
-		for(int i = 0; i < dict_size[index]; ++i)
-			for(int j = 0; j < dict_size[index]; ++j)
+		bool **adjacentMatrix = new bool*[size];
+		for(int i = 0; i < size; ++i)
+			adjacentMatrix[i] = new bool[size];
+
+		for(int i = 0; i < size; ++i)
+			for(int j = 0; j < size; ++j)
 				adjacentMatrix[i][j] = false;
 
-		for(int i = 0; i < dict_size[index]; ++i)
-			for(int j = i + 1; j < dict_size[index]; ++j)
-				adjacentMatrix[i][j] = isDoublet(dict[index][i], dict[index][j]);
-
-			
-			/*for(int i = 0; i < dict_size[index]; ++i)
-			{
-				for(int j = 0; j < dict_size[index]; ++j)
-					cout << &(adjacentMatrix[index][i][j]) << " ";
-				cout << "\n";
-			}*/
-			
+		for(int i = 0; i < size; ++i)
+			for(int j = i + 1; j < size; ++j)
+				adjacentMatrix[i][j] = isDoublet(dict[index][i], dict[index][j]);	
 
 		// If not solved yet, build BFS
-		// Initialize		
-		int distance[MAX_SIZE];
-		int predecessor[MAX_SIZE];
-		bool color[MAX_SIZE];
+		// Initialize
+		int *predecessor = new int[size];
+		bool *color = new bool[size];
 		struct Queue queue;
-		for(int i = 0; i < dict_size[index]; ++i)
+		queue.front = -1;
+		queue.rear = -1;
+		bool appeared = false;
+		for(int i = 0; i < size; ++i)
 		{
-			if(last.compare(dict[index][i]) == 0)
-			{
-				distance[i] = 0;
-				queue.element[0] = i;
+			if(last.compare(dict[index][i]) == 0 && !appeared)
+			{	
+				enqueue(queue, i, size);
 				color[i] = true;
+				appeared = true;
 			}
 			else
-			{
-				distance[i] = MAX_SIZE;
 				color[i] = false;
-			}
+
 			predecessor[i] = -1;
 		}
-		queue.front = 0;
-		queue.rear = 0;	
 
 		// Looping until front of queue is the last word
 		bool found = false;
 		while(!isEmpty(queue))
 		{
-			int current = dequeue(queue, dict_size[index]);	
+			int current = dequeue(queue, size);	
 			color[current] = true;
-			for(int i = 0; i < dict_size[index]; ++i)
+			for(int i = 0; i < size; ++i)
 			{
 				// Not traveled yet
 				if(!color[i])
@@ -179,11 +167,9 @@ int main()
 					// Is doublet
 					if(adjacentMatrix[current >= i ? i : current][current >= i ? current : i])
 					{
-						//cout << dict[index][current] << ":" << dict[index][i] << "\n";
-						enqueue(queue, i, dict_size[index]);
+						enqueue(queue, i, size);
 						color[i] = true;
 						predecessor[i] = current;
-						distance[i] = distance[current] + 1;
 						if(first.compare(dict[index][i]) == 0)
 						{
 							parent = i;
@@ -203,11 +189,11 @@ int main()
 				cout << dict[index][parent] << "\n";
 				parent = predecessor[parent];
 			}
-			cout << "\n";
 		}
 		else
-			cout << "No solution.\n\n";
-		
-
+			puts("No solution.");
+	
+		delete[] predecessor;
+		delete[] color;
 	}
 }
