@@ -131,7 +131,7 @@ int main()
 			for(int j = i + 1; j < size; ++j)
 				adjacentMatrix[i][j] = isDoublet(dict[index][i], dict[index][j]);	
 
-		// If not solved yet, build BFS
+		// build BFS
 		// Initialize
 		int *predecessor = new int[size];
 		bool *color = new bool[size];
