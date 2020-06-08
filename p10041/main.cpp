@@ -45,6 +45,7 @@ int main()
 
 		// Print result
 		cout << sum << "\n";
+		delete[] st;
 	}
 	return 0;
 }
